@@ -7,7 +7,7 @@ Kommandoradsverktyg som transkriberar MP4-videofiler till DOCX-dokument med hjä
 - **ffmpeg** — för konvertering av MP4 till WAV
 - **Conda** — med en miljö vid namn `whisperx` som har WhisperX installerat
 - **Hugging Face-token** — krävs för diarization och alignment-modeller
-- **whisper_vtt_to_docx.py** — skript för att konvertera VTT-undertexter till DOCX
+- **python-docx** — Python-paket för att skapa DOCX-filer (`pip install python-docx`)
 
 ## Användning
 
@@ -39,4 +39,4 @@ python transcribe.py lecture.mp4 EN    # transkribera på engelska
 2. Aktiverar conda-miljön `whisperx`
 3. Kör WhisperX med `large`-modellen för transkribering och diarization (talaridentifiering)
    - Svenska använder alignment-modellen `KBLab/wav2vec2-large-voxrex-swedish`
-4. Konverterar den genererade VTT-filen till ett DOCX-dokument via `whisper_vtt_to_docx.py`
+4. Konverterar den genererade VTT-filen till ett DOCX-dokument med talare och tidsstämplar
