@@ -1,10 +1,64 @@
 #!/usr/bin/env python3
-"""Transcribe an MP4 file to DOCX using ffmpeg, whisperx, and whisper_vtt_to_docx."""
+"""Transcribe an MP4 file to DOCX using ffmpeg and whisperx."""
 
 import argparse
 import os
+import re
 import subprocess
 import sys
+
+from docx import Document
+
+
+def vtt_to_docx(vtt_path, docx_path):
+    """Convert a VTT subtitle file to a DOCX document with speaker/transcription table."""
+    document = Document()
+    table = document.add_table(rows=1, cols=2)
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = "Speaker ID"
+    hdr_cells[1].text = "Transcription"
+
+    pattern_time = re.compile(r"(\d{2}:)?\d{2}:\d{2}\.\d{3} --> (\d{2}:)?\d{2}:\d{2}\.\d{3}")
+    pattern_speaker = re.compile(r"\[SPEAKER_\d{2}\]:")
+
+    current_speaker = None
+    current_text = ""
+    start_timestamp, end_timestamp = None, None
+    end_timestamp_temp = None
+
+    def add_row_to_table():
+        nonlocal current_speaker, current_text, start_timestamp, end_timestamp
+        if current_text:
+            current_text = current_text.replace("WEBVTT", "")
+            cells = table.add_row().cells
+            cells[0].text = current_speaker if current_speaker else "Unknown Speaker"
+            cells[1].text = current_text.strip() + f" ({start_timestamp} --> {end_timestamp})"
+            current_text = ""
+            start_timestamp, end_timestamp = None, None
+
+    with open(vtt_path, "r", encoding="utf-8") as file:
+        for line in file:
+            line = line.strip()
+            if pattern_time.match(line):
+                end_timestamp_temp = line.split(" --> ")[1]
+                if not start_timestamp:
+                    start_timestamp = line.split(" --> ")[0]
+            elif pattern_speaker.match(line):
+                speaker = line.split(":")[0] + "]"
+                if current_speaker and current_speaker != speaker:
+                    if end_timestamp_temp:
+                        end_timestamp = end_timestamp_temp
+                    add_row_to_table()
+                current_speaker = speaker
+                current_text += " " + line.split(":", 1)[1].strip()
+            elif line:
+                current_text += " " + line
+
+        if end_timestamp_temp:
+            end_timestamp = end_timestamp_temp
+        add_row_to_table()
+
+    document.save(docx_path)
 
 
 def main():
@@ -81,8 +135,9 @@ def main():
         print(f"Error: expected VTT file '{vtt_file}' was not created.")
         sys.exit(1)
 
+    docx_file = os.path.join(input_dir, f"{base_name}.docx")
     print(f"[4/4] Converting VTT to DOCX...")
-    subprocess.run(["python", "whisper_vtt_to_docx.py", vtt_file], check=True)
+    vtt_to_docx(vtt_file, docx_file)
 
     print("Done!")
 
